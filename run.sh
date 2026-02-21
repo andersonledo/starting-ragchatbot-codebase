@@ -1,4 +1,5 @@
 #!/bin/bash
+export PATH="$HOME/.local/bin:$PATH"
 
 # Create necessary directories
 mkdir -p docs 

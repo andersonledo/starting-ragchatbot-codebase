@@ -61,7 +61,6 @@ class CourseSearchTool(Tool):
         Returns:
             Formatted search results or error message
         """
-        
         # Use the vector store's unified search interface
         results = self.store.search(
             query=query,
@@ -104,7 +103,14 @@ class CourseSearchTool(Tool):
             source = course_title
             if lesson_num is not None:
                 source += f" - Lesson {lesson_num}"
-            sources.append(source)
+
+            # Look up URL: prefer lesson link, fall back to course link
+            if lesson_num is not None:
+                url = self.store.get_lesson_link(course_title, lesson_num)
+            else:
+                url = self.store.get_course_link(course_title)
+
+            sources.append({"label": source, "url": url})
             
             formatted.append(f"{header}\n{doc}")
         
@@ -112,6 +118,47 @@ class CourseSearchTool(Tool):
         self.last_sources = sources
         
         return "\n\n".join(formatted)
+
+class CourseOutlineTool(Tool):
+    """Tool for retrieving a course's structured outline from the catalog."""
+
+    def __init__(self, store: VectorStore):
+        self.store = store
+
+    def get_tool_definition(self) -> Dict[str, Any]:
+        return {
+            "name": "get_course_outline",
+            "description": (
+                "Retrieve the full outline of a course: its title, link, and complete "
+                "list of lessons with lesson numbers and titles. Use this for questions "
+                "about course structure, lesson count, or what topics a course covers at "
+                "a high level."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "course_title": {
+                        "type": "string",
+                        "description": "The course name to look up. Partial names are supported."
+                    }
+                },
+                "required": ["course_title"]
+            }
+        }
+
+    def execute(self, course_title: str) -> str:
+        outline = self.store.get_course_outline(course_title)
+    
+        if not outline:
+            return f"No course found matching '{course_title}'."
+        lines = [f"Course: {outline['title']}"]
+        if outline.get("course_link"):
+            lines.append(f"Link: {outline['course_link']}")
+        lines.append(f"\nLessons ({len(outline['lessons'])} total):")
+        for lesson in outline["lessons"]:
+            lines.append(f"  Lesson {lesson['lesson_number']}: {lesson['lesson_title']}")
+        return "\n".join(lines)
+
 
 class ToolManager:
     """Manages available tools for the AI"""
