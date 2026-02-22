@@ -9,21 +9,6 @@ from rag_system import RAGSystem
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def mock_config():
-    """Minimal config mock that satisfies RAGSystem.__init__."""
-    config = MagicMock()
-    config.ANTHROPIC_API_KEY = "test_key"
-    config.ANTHROPIC_MODEL = "test-model"
-    config.EMBEDDING_MODEL = "all-MiniLM-L6-v2"
-    config.CHUNK_SIZE = 800
-    config.CHUNK_OVERLAP = 100
-    config.MAX_RESULTS = 5
-    config.MAX_HISTORY = 2
-    config.CHROMA_PATH = "./test_chroma"
-    return config
-
-
-@pytest.fixture
 def rag(mock_config):
     """RAGSystem with all external dependencies patched out.
 
