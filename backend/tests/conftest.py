@@ -1,7 +1,7 @@
 import sys
 import os
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 # Add backend directory to path so test files can import backend modules directly
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -44,3 +44,61 @@ def mock_vector_store(sample_search_results):
         ]
     }
     return mock
+
+
+# ---------------------------------------------------------------------------
+# API-level fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def mock_rag_instance():
+    """Pre-configured MagicMock for RAGSystem, suitable for API-level tests."""
+    mock = MagicMock()
+    mock.query.return_value = (
+        "Python is a high-level programming language.",
+        [{"label": "Python Basics - Lesson 1", "url": "https://example.com/lesson1"}],
+    )
+    mock.get_course_analytics.return_value = {
+        "total_courses": 2,
+        "course_titles": ["Python Basics", "FastAPI Course"],
+    }
+    mock.session_manager.create_session.return_value = "new-session-123"
+    return mock
+
+
+@pytest.fixture
+def api_client(mock_rag_instance):
+    """TestClient for the real FastAPI app with all external deps patched.
+
+    A lightweight _MockStaticFiles replaces Starlette's StaticFiles so that
+    importing app.py succeeds without a real frontend/ directory on disk.
+    The module-level rag_system in app.py is replaced with mock_rag_instance
+    so endpoint functions use the test mock for every request.
+    """
+    from fastapi.testclient import TestClient
+
+    class _MockStaticFiles:
+        """Minimal ASGI stub mounted at '/' in place of the real StaticFiles."""
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __call__(self, scope, receive, send):
+            if scope["type"] != "http":
+                return
+            from starlette.responses import HTMLResponse
+            await HTMLResponse("<html><body>Test frontend</body></html>")(scope, receive, send)
+
+    # Remove any cached import so that the patched symbols take effect.
+    sys.modules.pop("app", None)
+
+    with patch("fastapi.staticfiles.StaticFiles", _MockStaticFiles), \
+         patch("rag_system.RAGSystem", return_value=mock_rag_instance):
+        import app as _app_module
+
+    # Replace the module-level variable so endpoint closures resolve to our mock.
+    _app_module.rag_system = mock_rag_instance
+
+    yield TestClient(_app_module.app)
+
+    sys.modules.pop("app", None)
