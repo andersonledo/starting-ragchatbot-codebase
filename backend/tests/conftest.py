@@ -10,6 +10,30 @@ from vector_store import SearchResults
 
 
 @pytest.fixture
+def mock_config():
+    """Minimal config mock shared across all test modules."""
+    config = MagicMock()
+    config.ANTHROPIC_API_KEY = "test_key"
+    config.ANTHROPIC_MODEL = "test-model"
+    config.EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+    config.CHUNK_SIZE = 800
+    config.CHUNK_OVERLAP = 100
+    config.MAX_RESULTS = 5
+    config.MAX_HISTORY = 2
+    config.CHROMA_PATH = "./test_chroma"
+    return config
+
+
+@pytest.fixture
+def sample_sources():
+    """Sample source data in the format returned by RAGSystem.query()."""
+    return [
+        {"label": "Python Course · Lesson 1", "url": "https://example.com/lesson1"},
+        {"label": "Python Course · Lesson 2", "url": None},
+    ]
+
+
+@pytest.fixture
 def sample_search_results():
     """A valid SearchResults object with one document."""
     return SearchResults(
