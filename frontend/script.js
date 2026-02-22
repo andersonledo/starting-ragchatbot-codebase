@@ -1,6 +1,32 @@
 // API base URL - use relative path to work from any host
 const API_URL = '/api';
 
+// Theme management
+function initTheme() {
+    const saved = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+    updateThemeIcon(saved);
+}
+
+function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    updateThemeIcon(next);
+}
+
+function updateThemeIcon(theme) {
+    const sunIcon = document.getElementById('sunIcon');
+    const moonIcon = document.getElementById('moonIcon');
+    // In dark mode show the sun (to switch to light); in light mode show the moon (to switch to dark)
+    sunIcon.style.display = theme === 'dark' ? 'block' : 'none';
+    moonIcon.style.display = theme === 'light' ? 'block' : 'none';
+}
+
+// Apply theme before page renders to avoid flash
+initTheme();
+
 // Global state
 let currentSessionId = null;
 
@@ -19,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     createNewSession();
     loadCourseStats();
+    document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 });
 
 // Event Listeners
